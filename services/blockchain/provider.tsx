@@ -3,7 +3,7 @@ import React from 'react';
 import algosdk from 'algosdk';
 import { useUserData } from '../user/provider';
 
-const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
+const algodClient = new algosdk.Algodv2('', process.env.NEXT_PUBLIC_ALOG_URL!, '');
 const appIndex = parseInt(process.env.NEXT_PUBLIC_APP_ID!);
 
 type ProviderProps = React.PropsWithChildren<{}>;
