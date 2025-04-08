@@ -13,6 +13,7 @@ import { ScrollText, SquareCheckBig, Vote, Wallet } from 'lucide-react';
 import { useUserData } from '@/services/user/provider';
 import { useModal } from '@/services/modal/provider';
 import { useBlockchain } from '@/services/blockchain/provider';
+import ResultModal from './__components__/result modal';
 
 const shortenAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -20,13 +21,15 @@ const shortenAddress = (address: string) => {
 
 export default function Home() {
     const { user, connectWallet, disconnectWallet } = useUserData();
-    const { handleBlockchainVote } = useBlockchain();
+    const { handleBlockchainVote, handleGetVotes } = useBlockchain();
     const { handleSetModal } = useModal();
 
     const handleVote = () => {
         handleSetModal(<VoteModal handleVote={handleBlockchainVote} />);
     };
-    const handleResults = () => {};
+    const handleResults = () => {
+        handleSetModal(<ResultModal handleGetVotes={handleGetVotes} />);
+    };
 
     return (
         <div className="flex flex-col gap-4 py-16 px-32">

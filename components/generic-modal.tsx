@@ -6,13 +6,14 @@ import { DialogClose, DialogDescription, DialogFooter, DialogHeader, DialogTitle
 type Props = React.PropsWithChildren<{
     title: string;
     description: string;
-    btn_text: string;
-    btn_action: () => void;
+    btn_text?: string;
+    btn_action?: () => void;
 }>;
 
 export default function GenericModal({ title, description, btn_text, btn_action, children }: Props) {
     const closeBtnRef = React.useRef<HTMLButtonElement>(null);
     const handleLocalAction = () => {
+        if (!btn_action) return;
         btn_action();
         if (closeBtnRef.current) {
             closeBtnRef.current.click();
@@ -32,9 +33,11 @@ export default function GenericModal({ title, description, btn_text, btn_action,
                         Cancel
                     </Button>
                 </DialogClose>
-                <Button type="button" onClick={handleLocalAction}>
-                    {btn_text}
-                </Button>
+                {btn_text && btn_action && (
+                    <Button type="button" onClick={handleLocalAction}>
+                        {btn_text}
+                    </Button>
+                )}
             </DialogFooter>
         </>
     );

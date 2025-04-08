@@ -1,4 +1,4 @@
-import { Candidate as CandidateType } from './constants';
+import { Candidate as CandidateType } from '../constants';
 
 type Props = {
     candidate: CandidateType;

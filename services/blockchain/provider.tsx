@@ -10,7 +10,7 @@ type ProviderProps = React.PropsWithChildren<{}>;
 
 type BlockchainContextType = {
     handleBlockchainVote: (candidateId: number) => Promise<string | null>;
-    getVotingResults: (appId: number) => Promise<Record<string, number> | null>;
+    handleGetVotes: () => Promise<Record<string, number> | null>;
 };
 
 const BlockchainContext = React.createContext<BlockchainContextType | undefined>(undefined);
@@ -126,14 +126,14 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
         }
     };
 
-    const getVotingResults = async (appId: number): Promise<Record<string, number> | null> => {
+    const handleGetVotes = async (): Promise<Record<string, number> | null> => {
         if (!user) {
             alert('Please connect your Algorand wallet first.');
             return null;
         }
 
         try {
-            const appInfo = await algodClient.getApplicationByID(appId).do();
+            const appInfo = await algodClient.getApplicationByID(appIndex).do();
             const globalState = appInfo.params['globalState'];
 
             if (!globalState) {
@@ -156,7 +156,7 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
         }
     };
 
-    return <BlockchainContext.Provider value={{ handleBlockchainVote, getVotingResults }}>{children}</BlockchainContext.Provider>;
+    return <BlockchainContext.Provider value={{ handleBlockchainVote, handleGetVotes }}>{children}</BlockchainContext.Provider>;
 };
 
 export default BlockchainProvider;

@@ -5,7 +5,7 @@ import GenericModal from '@/components/generic-modal';
 
 import Candidate from './candidate';
 
-import { CANDIDATES } from './constants';
+import { CANDIDATES } from '../constants';
 
 type Props = {
     handleVote: (candidate: number) => Promise<string | null>;
