@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
+import { Toaster } from '@/components/ui/sonner';
+
 import UserProvider from '@/services/user/provider';
 import BlockchainProvider from '@/services/blockchain/provider';
 import ModalProvider from '@/services/modal/provider';
@@ -45,6 +47,7 @@ export default function RootLayout({
                             <BlockchainProvider>{children}</BlockchainProvider>
                         </UserProvider>
                     </ModalProvider>
+                    <Toaster />
                 </ErrorBoundary>
             </body>
         </html>

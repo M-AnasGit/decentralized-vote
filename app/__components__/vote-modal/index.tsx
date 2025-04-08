@@ -1,6 +1,8 @@
 'use client';
 import React from 'react';
 
+import { toast } from 'sonner';
+
 import GenericModal from '@/components/generic-modal';
 
 import Candidate from './candidate';
@@ -23,12 +25,16 @@ export default function VoteModal({ handleVote }: Props) {
             return;
         }
 
+        toast.info('Voting... Please wait.', {
+            duration: 2000000,
+        });
         const txId = await handleVote(CANDIDATES[selectedCandidate].value);
+        toast.dismiss();
         if (!txId) {
             alert('Transaction failed. Please try again.');
             return;
         } else {
-            window.open(`https://testnet.algoexplorer.io/tx/${txId}`, '_blank');
+            toast.success('Vote successfully casted! Check your wallet for the transaction.');
         }
     };
 
