@@ -1,0 +1,102 @@
+#pragma version 5
+
+txn ApplicationID
+int 0
+== 
+bnz initialize
+
+txn OnCompletion
+int NoOp
+== 
+bnz vote
+
+txn OnCompletion
+int ClearState
+==
+bnz allow_clearstate
+
+initialize:
+    byte "PDP"
+    int 0
+    app_global_put
+
+    byte "APC"
+    int 0
+    app_global_put
+
+    byte "APGA"
+    int 0
+    app_global_put
+
+    byte "ANPP"
+    int 0
+    app_global_put
+
+    int 1
+    return
+
+vote:
+    txn ApplicationArgs 0
+        btoi
+        dup
+        int 1
+        ==
+        bnz increment_pdp
+        dup
+        int 2
+        ==
+        bnz increment_apc
+        dup
+        int 3
+        ==
+        bnz increment_apga
+        int 4
+        ==
+        bnz increment_anpp
+        err
+        
+
+increment_pdp:
+    byte "PDP"       
+    dup               
+    app_global_get    
+    int 1             
+    +                 
+    app_global_put    
+    int 1
+    return
+
+increment_apc:
+    byte "APC"
+    dup               
+    app_global_get    
+    int 1             
+    +                 
+    app_global_put    
+    int 1
+    return
+
+increment_apga:
+    byte "APGA"
+    dup               
+    app_global_get    
+    int 1             
+    +                 
+    app_global_put    
+    int 1
+    return
+
+increment_anpp:
+    byte "ANPP"
+    dup               
+    app_global_get    
+    int 1             
+    +                 
+    app_global_put    
+    int 1
+    return
+
+
+allow_clearstate:
+    int 1
+    return
