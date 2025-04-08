@@ -1,50 +1,162 @@
 'use client';
 import React from 'react';
 import algosdk from 'algosdk';
+import { useUserData } from '../user/provider';
 
-import { useUserData } from '../auth/provider';
+const algodClient = new algosdk.Algodv2('', 'https://testnet-api.algonode.cloud', '');
+const appIndex = parseInt(process.env.NEXT_PUBLIC_APP_ID!);
 
 type ProviderProps = React.PropsWithChildren<{}>;
 
 type BlockchainContextType = {
-    register: () => void;
+    handleBlockchainVote: (candidateId: number) => Promise<string | null>;
+    getVotingResults: (appId: number) => Promise<Record<string, number> | null>;
 };
 
 const BlockchainContext = React.createContext<BlockchainContextType | undefined>(undefined);
 
 const BlockchainProvider = ({ children }: ProviderProps) => {
-    const { user } = useUserData();
-    const client = React.useMemo(() => new algosdk.Algodv2(process.env.NEXT_PUBLIC_ALGOD_TOKEN!, process.env.NEXT_PUBLIC_BASE_SERVER!, process.env.NEXT_PUBLIC_PORT!), []);
+    const { user, signTransaction } = useUserData();
 
-    const optIn = async (sender: string, index: number) => {
+    const hasOptedIn = async (address: string, appId: number): Promise<boolean> => {
         try {
-            let params = await client.getTransactionParams().do();
-            params.fee = BigInt(1000);
-            params.flatFee = true;
-
-            let txn = algosdk.makeApplicationOptInTxnFromObject({
-                sender: sender,
-                appIndex: index,
-                suggestedParams: params,
-            });
-
-            const txn_b64 = await window.AlgoSigner.encoding.msgpackToBase64(txn.toByte());
-            let signedTxs = await window.AlgoSigner.signTxn([{ txn: txn_b64 }]);
-
-            let binarySignedTx = await window.AlgoSigner.encoding.base64ToMsgpack(signedTxs[0].blob);
-            let txId = await client.sendRawTransaction(binarySignedTx).do();
-
-            await algosdk.waitForConfirmation(client, txId.txid, 4);
-            await client.pendingTransactionInformation(txId.txid).do();
-        } catch (err) {
-            console.log(err);
+            const info = await algodClient.accountApplicationInformation(address, appId).do();
+            return !!info['appLocalState'];
+        } catch (err: any) {
+            if (err?.status === 404) {
+                return false;
+            }
+            throw err;
         }
     };
-    const register = () => {
-        if (user) optIn(user.address, parseInt(process.env.NEXT_PUBLIC_APP_ID!));
+
+    const optIn = async (appId: number) => {
+        if (!user) {
+            alert('Please connect your Algorand wallet first.');
+            return null;
+        }
+
+        try {
+            const suggestedParams = await algodClient.getTransactionParams().do();
+
+            const txn = algosdk.makeApplicationOptInTxnFromObject({
+                sender: user.address,
+                appIndex: appId,
+                suggestedParams,
+            });
+
+            const signedTxn = await signTransaction(txn);
+
+            if (!signedTxn) {
+                throw new Error('Transaction signing failed. Please try again.');
+            }
+
+            const simResult = await algodClient.simulateRawTransactions([signedTxn]).do();
+
+            if (simResult.txnGroups[0].failureMessage) {
+                throw new Error(`Simulation failed: ${simResult.txnGroups[0].failureMessage}`);
+            }
+
+            console.log('Simulation successful:', simResult);
+
+            const { txid } = await algodClient.sendRawTransaction(signedTxn).do();
+            const result = await algosdk.waitForConfirmation(algodClient, txid, 4);
+
+            console.log('Opt-in successful:', result);
+            return txid;
+        } catch (error) {
+            console.error('Opt-in error:', {
+                error,
+                appId,
+                userAddress: user?.address,
+            });
+            return null;
+        }
     };
 
-    return <BlockchainContext.Provider value={{ register }}>{children}</BlockchainContext.Provider>;
+    const handleBlockchainVote = async (partyNumber: number) => {
+        if (!user) {
+            alert('Please connect your Algorand wallet first.');
+            return null;
+        }
+
+        try {
+            if (partyNumber < 1 || partyNumber > 4) {
+                throw new Error('Invalid party number. Must be 1-4');
+            }
+
+            const isOptedIn = await hasOptedIn(user.address, appIndex);
+
+            if (!isOptedIn) {
+                console.log('User not opted in. Initiating opt-in...');
+                const optInTxId = await optIn(appIndex);
+                if (!optInTxId) throw new Error('Opt-in failed.');
+            }
+
+            const appArgs = [new Uint8Array([partyNumber])];
+
+            const suggestedParams = await algodClient.getTransactionParams().do();
+
+            const txn = algosdk.makeApplicationNoOpTxnFromObject({
+                sender: user.address,
+                appIndex,
+                appArgs,
+                suggestedParams,
+            });
+
+            const signedTxn = await signTransaction(txn);
+
+            if (!signedTxn) {
+                throw new Error('Transaction signing failed. Please try again.');
+            }
+
+            const { txid } = await algodClient.sendRawTransaction(signedTxn).do();
+            const result = await algosdk.waitForConfirmation(algodClient, txid, 4);
+
+            console.log('Vote successful:', result);
+            return txid;
+        } catch (error) {
+            console.error('Full voting error:', {
+                error,
+                partyNumber,
+                userAddress: user?.address,
+                appIndex: appIndex,
+            });
+            return null;
+        }
+    };
+
+    const getVotingResults = async (appId: number): Promise<Record<string, number> | null> => {
+        if (!user) {
+            alert('Please connect your Algorand wallet first.');
+            return null;
+        }
+
+        try {
+            const appInfo = await algodClient.getApplicationByID(appId).do();
+            const globalState = appInfo.params['globalState'];
+
+            if (!globalState) {
+                console.error('No global state found for the application');
+                return null;
+            }
+
+            const decoder = new TextDecoder('utf-8');
+            return globalState.reduce((acc: Record<string, number>, curr: algosdk.modelsv2.TealKeyValue) => {
+                const str = decoder.decode(curr.key);
+
+                return {
+                    ...acc,
+                    [str]: Number(curr.value.uint),
+                };
+            }, {});
+        } catch (error) {
+            console.error('Error fetching voting results:', error);
+            return null;
+        }
+    };
+
+    return <BlockchainContext.Provider value={{ handleBlockchainVote, getVotingResults }}>{children}</BlockchainContext.Provider>;
 };
 
 export default BlockchainProvider;

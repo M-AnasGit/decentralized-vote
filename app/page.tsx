@@ -2,14 +2,17 @@
 import React from 'react';
 import Image from 'next/image';
 
-import ProcessBubble from '../components/process-bubble';
+import ProcessBubble from './__components__/process-bubble';
+import VoteModal from './__components__/vote-modal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { Button } from '../components/ui/button';
 
 import logo from '../assets/images/AlgoVote.svg';
 import { ScrollText, SquareCheckBig, Vote, Wallet } from 'lucide-react';
 
-import { useUserData } from '@/services/auth/provider';
+import { useUserData } from '@/services/user/provider';
+import { useModal } from '@/services/modal/provider';
+import { useBlockchain } from '@/services/blockchain/provider';
 
 const shortenAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -17,15 +20,18 @@ const shortenAddress = (address: string) => {
 
 export default function Home() {
     const { user, connectWallet, disconnectWallet } = useUserData();
+    const { handleBlockchainVote } = useBlockchain();
+    const { handleSetModal } = useModal();
 
-    const handleVote = () => {};
-
+    const handleVote = () => {
+        handleSetModal(<VoteModal handleVote={handleBlockchainVote} />);
+    };
     const handleResults = () => {};
 
     return (
         <div className="flex flex-col gap-4 py-16 px-32">
             <nav className="flex w-full justify-between ">
-                <Image src={logo} alt="vote" />
+                <Image src={logo} alt="vote" width="100" height="100" className="w-auto" />
                 {user ? (
                     <div className="flex gap-4 items-center">
                         <TooltipProvider>

@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
-import UserProvider from '@/services/auth/provider';
+import UserProvider from '@/services/user/provider';
 import BlockchainProvider from '@/services/blockchain/provider';
+import ModalProvider from '@/services/modal/provider';
 import ErrorBoundary from '@/components/error-provider';
 
 declare global {
@@ -39,10 +40,11 @@ export default function RootLayout({
         <html lang="en">
             <body className={`${inter.variable} font-inter antialiased`}>
                 <ErrorBoundary>
-                    <UserProvider>
-                        {/* <BlockchainProvider>{children}</BlockchainProvider> */}
-                        {children}
-                    </UserProvider>
+                    <ModalProvider>
+                        <UserProvider>
+                            <BlockchainProvider>{children}</BlockchainProvider>
+                        </UserProvider>
+                    </ModalProvider>
                 </ErrorBoundary>
             </body>
         </html>

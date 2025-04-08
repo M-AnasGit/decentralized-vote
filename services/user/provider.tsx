@@ -24,30 +24,6 @@ const UserContext = React.createContext<UserContextType | undefined>(undefined);
 const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = React.useState<User | undefined>();
 
-    React.useEffect(() => {
-        const savedAddress = Cookies.get('walletAddress');
-
-        if (savedAddress) {
-            setUser({ name: 'User', address: savedAddress });
-
-            if (peraWallet.isConnected) {
-                peraWallet
-                    .reconnectSession()
-                    .then((accounts) => {
-                        if (accounts.length > 0) {
-                            setUser({ name: 'User', address: accounts[0] });
-                            Cookies.set('walletAddress', accounts[0], { expires: 7 });
-                        }
-                    })
-                    .catch(console.error);
-            }
-        }
-
-        return () => {
-            peraWallet.connector?.off('disconnect');
-        };
-    }, []);
-
     const connectWallet = async () => {
         try {
             const accounts = await peraWallet.connect();
@@ -62,6 +38,26 @@ const UserProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    React.useEffect(() => {
+        const savedAddress = Cookies.get('walletAddress');
+
+        if (savedAddress) {
+            peraWallet
+                .reconnectSession()
+                .then((accounts) => {
+                    if (accounts.length > 0) {
+                        setUser({ name: 'User', address: accounts[0] });
+                        Cookies.set('walletAddress', accounts[0], { expires: 7 });
+                    }
+                })
+                .catch(console.error);
+        }
+
+        return () => {
+            peraWallet.connector?.off('disconnect');
+        };
+    }, []);
+
     const disconnectWallet = () => {
         peraWallet.disconnect();
         setUser(undefined);
@@ -74,6 +70,11 @@ const UserProvider = ({ children }: { children: React.ReactNode }) => {
             return null;
         }
 
+        if (!peraWallet.connector) {
+            console.error('PeraWalletConnect is not initialized');
+            return null;
+        }
+
         try {
             const signedTxns = await peraWallet.signTransaction([
                 [
@@ -83,7 +84,7 @@ const UserProvider = ({ children }: { children: React.ReactNode }) => {
                 ],
             ]);
 
-            return signedTxns[0];
+            return new Uint8Array(signedTxns[0]);
         } catch (error) {
             console.error('Transaction signing failed', error);
             return null;
