@@ -1,7 +1,6 @@
 'use client';
 import React from 'react';
 import { PeraWalletConnect } from '@perawallet/connect';
-import algosdk from 'algosdk';
 
 import Cookies from 'js-cookie';
 
@@ -16,7 +15,6 @@ type UserContextType = {
     user?: User;
     connectWallet: () => Promise<void>;
     disconnectWallet: () => void;
-    signTransaction: (txn: algosdk.Transaction) => Promise<Uint8Array | null>;
 };
 
 const UserContext = React.createContext<UserContextType | undefined>(undefined);
@@ -64,34 +62,7 @@ const UserProvider = ({ children }: { children: React.ReactNode }) => {
         Cookies.remove('walletAddress');
     };
 
-    const signTransaction = async (txn: algosdk.Transaction) => {
-        if (!user?.address) {
-            console.error('No wallet connected');
-            return null;
-        }
-
-        if (!peraWallet.connector) {
-            console.error('PeraWalletConnect is not initialized');
-            return null;
-        }
-
-        try {
-            const signedTxns = await peraWallet.signTransaction([
-                [
-                    {
-                        txn,
-                    },
-                ],
-            ]);
-
-            return new Uint8Array(signedTxns[0]);
-        } catch (error) {
-            console.error('Transaction signing failed', error);
-            return null;
-        }
-    };
-
-    return <UserContext.Provider value={{ user, connectWallet, disconnectWallet, signTransaction }}>{children}</UserContext.Provider>;
+    return <UserContext.Provider value={{ user, connectWallet, disconnectWallet }}>{children}</UserContext.Provider>;
 };
 
 export default UserProvider;

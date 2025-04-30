@@ -1,162 +1,199 @@
 'use client';
 import React from 'react';
-import algosdk from 'algosdk';
 import { useUserData } from '../user/provider';
-
-const algodClient = new algosdk.Algodv2('', process.env.NEXT_PUBLIC_ALOG_URL!, '');
-const appIndex = parseInt(process.env.NEXT_PUBLIC_APP_ID!);
 
 type ProviderProps = React.PropsWithChildren<{}>;
 
+export type Candidate = {
+    address: string;
+    name: string;
+    voteCount: number;
+    isFixed: boolean;
+};
+
 type BlockchainContextType = {
-    handleBlockchainVote: (candidateId: number) => Promise<string | null>;
-    handleGetVotes: () => Promise<Record<string, number> | null>;
+    handleBlockchainVote: (candidateAddress: string) => Promise<string | null>;
+    handleGetVoteResults: () => Promise<Candidate[] | null>;
+    handlePresentAsCandidate: (name: string) => Promise<string | null>;
+    handleRemoveCandidate: () => Promise<string | null>;
+    loading: boolean;
+    error: string | null;
+    candidates: Candidate[];
+    refreshCandidates: () => Promise<void>;
 };
 
 const BlockchainContext = React.createContext<BlockchainContextType | undefined>(undefined);
 
 const BlockchainProvider = ({ children }: ProviderProps) => {
-    const { user, signTransaction } = useUserData();
+    const { user } = useUserData();
+    const [loading, setLoading] = React.useState(false);
+    const [error, setError] = React.useState<string | null>(null);
+    const [candidates, setCandidates] = React.useState<Candidate[]>([]);
 
-    const hasOptedIn = async (address: string, appId: number): Promise<boolean> => {
+    const refreshCandidates = async () => {
         try {
-            const info = await algodClient.accountApplicationInformation(address, appId).do();
-            return !!info['appLocalState'];
-        } catch (err: any) {
-            if (err?.status === 404) {
-                return false;
+            const results = await handleGetVoteResults();
+            if (results) {
+                setCandidates(results);
             }
-            throw err;
+        } catch (err) {
+            console.error('Failed to refresh candidates:', err);
         }
     };
 
-    const optIn = async (appId: number) => {
+    React.useEffect(() => {
+        refreshCandidates();
+    }, []);
+
+    const handleBlockchainVote = async (candidateAddress: string): Promise<string | null> => {
         if (!user) {
-            alert('Please connect your Algorand wallet first.');
+            setError('Please connect your wallet first.');
             return null;
         }
 
+        setLoading(true);
+        setError(null);
+
+        console.log('Voting for candidate:', candidateAddress);
+
         try {
-            const suggestedParams = await algodClient.getTransactionParams().do();
-
-            const txn = algosdk.makeApplicationOptInTxnFromObject({
-                sender: user.address,
-                appIndex: appId,
-                suggestedParams,
+            const response = await fetch('/api/vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    candidateAddress,
+                }),
             });
 
-            const signedTxn = await signTransaction(txn);
+            const data = await response.json();
 
-            if (!signedTxn) {
-                throw new Error('Transaction signing failed. Please try again.');
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to cast vote');
             }
 
-            const simResult = await algodClient.simulateRawTransactions([signedTxn]).do();
-
-            if (simResult.txnGroups[0].failureMessage) {
-                throw new Error(`Simulation failed: ${simResult.txnGroups[0].failureMessage}`);
-            }
-
-            console.log('Simulation successful:', simResult);
-
-            const { txid } = await algodClient.sendRawTransaction(signedTxn).do();
-            const result = await algosdk.waitForConfirmation(algodClient, txid, 4);
-
-            console.log('Opt-in successful:', result);
-            return txid;
-        } catch (error) {
-            console.error('Opt-in error:', {
-                error,
-                appId,
-                userAddress: user?.address,
-            });
+            await refreshCandidates();
+            return data.txHash;
+        } catch (error: any) {
+            setError(error.message || 'An error occurred while voting');
+            console.error('Voting error:', error);
             return null;
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleBlockchainVote = async (partyNumber: number) => {
+    const handleGetVoteResults = async (): Promise<Candidate[] | null> => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/getVoteResults');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to get vote results');
+            }
+
+            return data.candidates;
+        } catch (error: any) {
+            setError(error.message || 'An error occurred while getting vote results');
+            console.error('Error fetching vote results:', error);
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePresentAsCandidate = async (name: string): Promise<string | null> => {
         if (!user) {
-            alert('Please connect your Algorand wallet first.');
+            setError('Please connect your wallet first.');
             return null;
         }
 
+        setLoading(true);
+        setError(null);
+
         try {
-            if (partyNumber < 1 || partyNumber > 4) {
-                throw new Error('Invalid party number. Must be 1-4');
-            }
-
-            const isOptedIn = await hasOptedIn(user.address, appIndex);
-
-            if (!isOptedIn) {
-                console.log('User not opted in. Initiating opt-in...');
-                const optInTxId = await optIn(appIndex);
-                if (!optInTxId) throw new Error('Opt-in failed.');
-            }
-
-            const appArgs = [new Uint8Array([partyNumber])];
-
-            const suggestedParams = await algodClient.getTransactionParams().do();
-
-            const txn = algosdk.makeApplicationNoOpTxnFromObject({
-                sender: user.address,
-                appIndex,
-                appArgs,
-                suggestedParams,
+            const response = await fetch('/api/presentAsCandidate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name,
+                }),
             });
 
-            const signedTxn = await signTransaction(txn);
+            const data = await response.json();
 
-            if (!signedTxn) {
-                throw new Error('Transaction signing failed. Please try again.');
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to register as candidate');
             }
 
-            const { txid } = await algodClient.sendRawTransaction(signedTxn).do();
-            const result = await algosdk.waitForConfirmation(algodClient, txid, 4);
+            // Refresh candidates after registering
+            await refreshCandidates();
 
-            console.log('Vote successful:', result);
-            return txid;
-        } catch (error) {
-            console.error('Full voting error:', {
-                error,
-                partyNumber,
-                userAddress: user?.address,
-                appIndex: appIndex,
-            });
+            return data.txHash;
+        } catch (error: any) {
+            setError(error.message || 'An error occurred while registering as candidate');
+            console.error('Registration error:', error);
             return null;
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleGetVotes = async (): Promise<Record<string, number> | null> => {
+    const handleRemoveCandidate = async (): Promise<string | null> => {
         if (!user) {
-            alert('Please connect your Algorand wallet first.');
+            setError('Please connect your wallet first.');
             return null;
         }
 
-        try {
-            const appInfo = await algodClient.getApplicationByID(appIndex).do();
-            const globalState = appInfo.params['globalState'];
+        setLoading(true);
+        setError(null);
 
-            if (!globalState) {
-                console.error('No global state found for the application');
-                return null;
+        try {
+            const response = await fetch('/api/removeCandidate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userAddress: user.address,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to remove candidacy');
             }
 
-            const decoder = new TextDecoder('utf-8');
-            return globalState.reduce((acc: Record<string, number>, curr: algosdk.modelsv2.TealKeyValue) => {
-                const str = decoder.decode(curr.key);
-
-                return {
-                    ...acc,
-                    [str]: Number(curr.value.uint),
-                };
-            }, {});
-        } catch (error) {
-            console.error('Error fetching voting results:', error);
+            await refreshCandidates();
+            return data.txHash;
+        } catch (error: any) {
+            setError(error.message || 'An error occurred while removing candidacy');
+            console.error('Removal error:', error);
             return null;
+        } finally {
+            setLoading(false);
         }
     };
 
-    return <BlockchainContext.Provider value={{ handleBlockchainVote, handleGetVotes }}>{children}</BlockchainContext.Provider>;
+    const value = {
+        handleBlockchainVote,
+        handleGetVoteResults,
+        handlePresentAsCandidate,
+        handleRemoveCandidate,
+        loading,
+        error,
+        candidates,
+        refreshCandidates,
+    };
+
+    return <BlockchainContext.Provider value={value}>{children}</BlockchainContext.Provider>;
 };
 
 export default BlockchainProvider;
