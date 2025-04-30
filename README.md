@@ -1,57 +1,54 @@
 # Decentralized Voting App (Next.js Frontend)
 
-A frontend for interacting with the Algorand voting smart contract.
+A modern frontend for interacting with an Ethereum-based decentralized voting smart contract.
 
 ## Features
-
-- Connect Algorand wallets (using Pera Wallet)
+- Connect Ethereum wallets (using ethers.js)
 - View and participate in decentralized voting
 - Modern UI with Tailwind CSS
-- Theming support
+- Dark/Light theme support
+- Responsive design for all devices
 
 ## Installation
 
 1. Clone the repository:
-
-    ```bash
-    git clone https://github.com/M-AnasGit/decentralized-vote.git
-    cd decentralized-vote
-    ```
+   ```bash
+   git clone https://github.com/yourname/decentralized-vote.git
+   cd decentralized-vote
+   ```
 
 2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-    ```bash
-    npm install
-    ```
-
-3. Create a `.env` file with:
-    ```env
-    NEXT_PUBLIC_ALGOD_URL=https://testnet-api.algonode.cloud
-    NEXT_PUBLIC_APP_ID=737061610
-    ```
-
-`737061610` is the application id of the app made during development. If you want to make your own go to the `smart-contract` branch.
+3. Create a `.env.local` file with:
+   ```env
+    NEXT_PUBLIC_RPC_URL=https://rpc.api.moonbase.moonbeam.network
+    NEXT_PUBLIC_CONTRACT_ADDRESS=0x344C7E3F2fed27D26216CAfA4FfEf79b561Ce210
+    WALLET_PRIVATE_KEY=<YOUR_WALLET_PRIVATE_KEY>
+   ```
 
 ## Usage
 
 1. Start development server:
-
-    ```bash
-    npm run dev
-    ```
+   ```bash
+   npm run dev
+   ```
 
 2. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## Key Dependencies
 
 - **Next.js 15** - React framework
-- **algosdk** - Algorand SDK
-- **Pera Wallet** - Wallet connection
+- **ethers.js** - Ethereum interaction library
+- **Web3Modal** - Wallet connection
 - **Tailwind CSS** - Styling
 - **Radix UI** - Accessible components
 
 ## Requirements
 
-- Node.js
-- Algorand Testnet account (for voting)
-- Pera Wallet mobile app (for mobile users)
+- Node.js 18+
+- Ethereum wallet (MetaMask, WalletConnect, etc.)
+- Testnet ETH (for voting on test networks)
+- PeraWallet mobile app
