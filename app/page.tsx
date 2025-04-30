@@ -43,7 +43,7 @@ export default function Home() {
         const response = await handleRemoveCandidate();
         toast.dismiss();
         if (!response) {
-            alert('Transaction failed. You have already voted!');
+            alert('Transaction failed. You are still a candidate.');
             return;
         } else {
             toast.success('Transaction successful! You are no longer a candidate.');

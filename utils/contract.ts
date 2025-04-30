@@ -1,6 +1,4 @@
-import { ethers } from 'ethers';
-
-const contractABI = [
+export const contractABI = [
     {
         inputs: [
             {
@@ -330,22 +328,7 @@ const contractABI = [
     },
 ];
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
-
-export const getProvider = () => {
-    return new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.api.moonbase.moonbeam.network');
-};
-
-export const getContract = () => {
-    const provider = getProvider();
-    return new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider);
-};
-
-export const getContractWithSigner = (privateKey: string) => {
-    const provider = getProvider();
-    const wallet = new ethers.Wallet(privateKey, provider);
-    return new ethers.Contract(CONTRACT_ADDRESS, contractABI, wallet);
-};
+export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!;
 
 export const formatCandidates = (candidateList: string[], voteCounts: bigint[], fixedStatus: boolean[], candidateNames: string[]) => {
     return candidateList.map((address, index) => ({

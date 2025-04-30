@@ -30,7 +30,7 @@ export default function PresentModal({ candidates, handlePresentAsCandidate }: P
         const txId = await handlePresentAsCandidate(name);
         toast.dismiss();
         if (!txId) {
-            alert('Transaction failed. You have already voted!');
+            alert('Transaction failed. You are already a candidate.');
             return;
         } else {
             toast.success('Transaction successful! You are now a candidate.');

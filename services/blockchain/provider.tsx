@@ -1,6 +1,9 @@
 'use client';
 import React from 'react';
+import { ethers } from 'ethers';
 import { useUserData } from '../user/provider';
+import { contractABI, formatCandidates } from '@/utils/contract';
+import { format } from 'path';
 
 type ProviderProps = React.PropsWithChildren<{}>;
 
@@ -25,7 +28,7 @@ type BlockchainContextType = {
 const BlockchainContext = React.createContext<BlockchainContextType | undefined>(undefined);
 
 const BlockchainProvider = ({ children }: ProviderProps) => {
-    const { user } = useUserData();
+    const { user, signer } = useUserData();
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
     const [candidates, setCandidates] = React.useState<Candidate[]>([]);
@@ -43,10 +46,10 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
 
     React.useEffect(() => {
         refreshCandidates();
-    }, []);
+    }, [user, signer]);
 
     const handleBlockchainVote = async (candidateAddress: string): Promise<string | null> => {
-        if (!user) {
+        if (!user || !signer) {
             setError('Please connect your wallet first.');
             return null;
         }
@@ -62,19 +65,24 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    candidateAddress,
-                }),
+                body: JSON.stringify({ candidateAddress }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to cast vote');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to prepare transaction');
             }
 
-            await refreshCandidates();
-            return data.txHash;
+            const txData = await response.json();
+            const tx = await signer.sendTransaction({
+                to: txData.to,
+                data: txData.data,
+                value: txData.value || '0x0',
+            });
+
+            const receipt = await tx.wait(1);
+            console.log('Vote successful:', receipt);
+            return receipt.transactionHash;
         } catch (error: any) {
             setError(error.message || 'An error occurred while voting');
             console.error('Voting error:', error);
@@ -85,18 +93,29 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
     };
 
     const handleGetVoteResults = async (): Promise<Candidate[] | null> => {
+        if (!user || !signer) {
+            setError('Please connect your wallet first.');
+            return null;
+        }
+
         setLoading(true);
         setError(null);
 
         try {
             const response = await fetch('/api/getVoteResults');
-            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to get vote results');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to prepare transaction');
             }
 
-            return data.candidates;
+            const txData = await response.json();
+            const contract = new ethers.Contract(txData.to, contractABI, signer);
+            const [candidateList, voteCounts, fixedStatus, candidateNames] = await contract.getVoteResults();
+
+            console.log(candidateList, voteCounts, fixedStatus, candidateNames);
+
+            return formatCandidates(candidateList, voteCounts, fixedStatus, candidateNames);
         } catch (error: any) {
             setError(error.message || 'An error occurred while getting vote results');
             console.error('Error fetching vote results:', error);
@@ -107,7 +126,7 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
     };
 
     const handlePresentAsCandidate = async (name: string): Promise<string | null> => {
-        if (!user) {
+        if (!user || !signer) {
             setError('Please connect your wallet first.');
             return null;
         }
@@ -121,21 +140,26 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    name,
-                }),
+                body: JSON.stringify({ name }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to register as candidate');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to prepare transaction');
             }
 
-            // Refresh candidates after registering
+            const txData = await response.json();
+            const tx = await signer.sendTransaction({
+                to: txData.to,
+                data: txData.data,
+                value: txData.value || '0x0',
+            });
+
+            const receipt = await tx.wait(1);
+            console.log('Presented successfully:', receipt);
             await refreshCandidates();
 
-            return data.txHash;
+            return receipt.transactionHash;
         } catch (error: any) {
             setError(error.message || 'An error occurred while registering as candidate');
             console.error('Registration error:', error);
@@ -146,7 +170,7 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
     };
 
     const handleRemoveCandidate = async (): Promise<string | null> => {
-        if (!user) {
+        if (!user || !signer) {
             setError('Please connect your wallet first.');
             return null;
         }
@@ -160,19 +184,25 @@ const BlockchainProvider = ({ children }: ProviderProps) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    userAddress: user.address,
-                }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to remove candidacy');
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to prepare transaction');
             }
 
+            const txData = await response.json();
+            const tx = await signer.sendTransaction({
+                to: txData.to,
+                data: txData.data,
+                value: txData.value || '0x0',
+            });
+
+            const receipt = await tx.wait(1);
+            console.log('Removed successfully:', receipt);
             await refreshCandidates();
-            return data.txHash;
+
+            return receipt.transactionHash;
         } catch (error: any) {
             setError(error.message || 'An error occurred while removing candidacy');
             console.error('Removal error:', error);
