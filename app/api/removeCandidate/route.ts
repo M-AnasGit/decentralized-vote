@@ -1,29 +1,16 @@
+import { ethers } from 'ethers';
 import { NextRequest, NextResponse } from 'next/server';
-import { getContractWithSigner } from '@/utils/contract';
+import { CONTRACT_ADDRESS, contractABI } from '@/utils/contract';
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { userAddress } = body;
+        const contractInterface = new ethers.utils.Interface(contractABI);
 
-        if (!userAddress) {
-            return NextResponse.json({ error: 'User address is required' }, { status: 400 });
-        }
-
-        const privateKey = process.env.WALLET_PRIVATE_KEY;
-        if (!privateKey) {
-            return NextResponse.json({ error: 'Server wallet configuration error' }, { status: 500 });
-        }
-
-        const contract = getContractWithSigner(privateKey);
-
-        const tx = await contract.removeCandidate();
-        const receipt = await tx.wait();
-
+        const data = contractInterface.encodeFunctionData('removeCandidate');
         return NextResponse.json({
-            success: true,
-            txHash: receipt.hash,
-            message: 'Candidacy removed successfully',
+            to: CONTRACT_ADDRESS,
+            data: data,
+            value: '0',
         });
     } catch (error: any) {
         console.error('Error in removeCandidate API:', error);

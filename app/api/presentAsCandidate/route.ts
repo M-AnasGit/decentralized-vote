@@ -1,5 +1,6 @@
+import { ethers } from 'ethers';
 import { NextRequest, NextResponse } from 'next/server';
-import { getContractWithSigner } from '@/utils/contract';
+import { CONTRACT_ADDRESS, contractABI } from '@/utils/contract';
 
 export async function POST(request: NextRequest) {
     try {
@@ -7,23 +8,16 @@ export async function POST(request: NextRequest) {
         const { name } = body;
 
         if (!name) {
-            return NextResponse.json({ error: 'Candidate name are required' }, { status: 400 });
+            return NextResponse.json({ error: 'Name is required' }, { status: 400 });
         }
 
-        const privateKey = process.env.WALLET_PRIVATE_KEY;
+        const contractInterface = new ethers.utils.Interface(contractABI);
 
-        if (!privateKey) {
-            return NextResponse.json({ error: 'Server wallet configuration error' }, { status: 500 });
-        }
-
-        const contract = getContractWithSigner(privateKey);
-        const tx = await contract.presentAsCandidate(name);
-        const receipt = await tx.wait();
-
+        const data = contractInterface.encodeFunctionData('presentAsCandidate', [name]);
         return NextResponse.json({
-            success: true,
-            txHash: receipt.hash,
-            message: 'Registered as candidate successfully',
+            to: CONTRACT_ADDRESS,
+            data: data,
+            value: '0',
         });
     } catch (error: any) {
         console.error('Error in presentAsCandidate API:', error);

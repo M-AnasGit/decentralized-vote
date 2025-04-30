@@ -1,5 +1,6 @@
+import { ethers } from 'ethers';
 import { NextRequest, NextResponse } from 'next/server';
-import { getContractWithSigner } from '@/utils/contract';
+import { contractABI, CONTRACT_ADDRESS } from '@/utils/contract';
 
 export async function POST(request: NextRequest) {
     try {
@@ -7,31 +8,22 @@ export async function POST(request: NextRequest) {
         const { candidateAddress } = body;
 
         if (!candidateAddress) {
-            return NextResponse.json({ error: 'Candidate address are required' }, { status: 400 });
+            return NextResponse.json({ error: 'Candidate address is required' }, { status: 400 });
         }
 
-        const privateKey = process.env.WALLET_PRIVATE_KEY;
+        const contractInterface = new ethers.utils.Interface(contractABI);
 
-        if (!privateKey) {
-            return NextResponse.json({ error: 'Server wallet configuration error' }, { status: 500 });
-        }
-
-        const contract = getContractWithSigner(privateKey);
-
-        const tx = await contract.vote(candidateAddress);
-        const receipt = await tx.wait();
-
+        const data = contractInterface.encodeFunctionData('vote', [candidateAddress]);
         return NextResponse.json({
-            success: true,
-            txHash: receipt.hash,
-            message: 'Vote cast successfully',
+            to: CONTRACT_ADDRESS,
+            data: data,
+            value: '0',
         });
     } catch (error: any) {
-        console.error('Error in vote API:', error);
-
+        console.error('Error preparing vote transaction:', error);
         return NextResponse.json(
             {
-                error: error.message || 'Failed to cast vote',
+                error: error.message || 'Failed to prepare vote transaction',
                 details: error.reason || error.code || null,
             },
             { status: 500 },
