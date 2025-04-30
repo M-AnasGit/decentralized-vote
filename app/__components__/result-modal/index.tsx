@@ -2,17 +2,19 @@
 import React from 'react';
 
 import GenericModal from '@/components/generic-modal';
-import { Loader2 } from 'lucide-react';
 import CandidateResult from './candidate-result';
-import { CANDIDATES } from '../constants';
+
+import { Loader2 } from 'lucide-react';
+
+import { Candidate } from '@/services/blockchain/provider';
 
 type Props = {
-    handleGetVotes: () => Promise<Record<string, number> | null>;
+    handleGetVotes: () => Promise<Candidate[] | null>;
 };
 
 export default function ResultModal({ handleGetVotes }: Props) {
     const [loading, setLoading] = React.useState(false);
-    const [votes, setVotes] = React.useState<Record<string, number> | null>(null);
+    const [votes, setVotes] = React.useState<Candidate[] | null>(null);
 
     React.useEffect(() => {
         const fetchVotes = async () => {
@@ -33,8 +35,8 @@ export default function ResultModal({ handleGetVotes }: Props) {
                 </div>
             ) : votes ? (
                 <div className="flex flex-col gap-4 py-8">
-                    {Object.entries(votes).map(([k, v], i) => (
-                        <CandidateResult key={i} candidate={CANDIDATES.find((candidate) => candidate.party === k)} votes={v} />
+                    {votes.map((v, i) => (
+                        <CandidateResult key={i} candidate={v} votes={v.voteCount} />
                     ))}
                 </div>
             ) : (

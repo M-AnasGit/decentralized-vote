@@ -7,13 +7,12 @@ import GenericModal from '@/components/generic-modal';
 
 import Candidate from './candidate';
 
-import { CANDIDATES } from '../constants';
-
 type Props = {
-    handleVote: (candidate: number) => Promise<string | null>;
+    candidates: any[];
+    handleVote: (candidateAddress: string) => Promise<string | null>;
 };
 
-export default function VoteModal({ handleVote }: Props) {
+export default function VoteModal({ candidates, handleVote }: Props) {
     const [selectedCandidate, setSelectedCandidate] = React.useState<number | null>(null);
     const handleSelectCandidate = (index: number) => {
         setSelectedCandidate(index);
@@ -28,10 +27,10 @@ export default function VoteModal({ handleVote }: Props) {
         toast.info('Voting... Please wait.', {
             duration: 2000000,
         });
-        const txId = await handleVote(CANDIDATES[selectedCandidate].value);
+        const txId = await handleVote(candidates[selectedCandidate].address);
         toast.dismiss();
         if (!txId) {
-            alert('Transaction failed. Please try again.');
+            alert('Transaction failed. You have already voted!');
             return;
         } else {
             toast.success('Vote successfully casted! Check your wallet for the transaction.');
@@ -41,7 +40,7 @@ export default function VoteModal({ handleVote }: Props) {
     return (
         <GenericModal title="Vote for your candidate" description="Vote for your candidate and make your voice heard!" btn_text="Vote" btn_action={confirmVote}>
             <div className="flex flex-col gap-4 py-8">
-                {CANDIDATES.map((candidate, i) => (
+                {candidates.map((candidate, i) => (
                     <Candidate key={i} candidate={candidate} selected={selectedCandidate === i} handleSelectCandidate={() => handleSelectCandidate(i)} />
                 ))}
             </div>

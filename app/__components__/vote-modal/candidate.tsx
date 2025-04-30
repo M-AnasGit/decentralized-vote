@@ -1,4 +1,4 @@
-import { Candidate as CandidateType } from '../constants';
+import { Candidate as CandidateType } from '@/services/blockchain/provider';
 
 type Props = {
     candidate: CandidateType;
@@ -14,7 +14,6 @@ export default function Candidate({ candidate, selected, handleSelectCandidate }
             onClick={handleSelectCandidate}
         >
             <h5 className="font-medium text-lg">{candidate.name}</h5>
-            <p className="text-muted-foreground">{candidate.party}</p>
         </div>
     );
 }
