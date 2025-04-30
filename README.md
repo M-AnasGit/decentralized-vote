@@ -22,11 +22,10 @@ A modern frontend for interacting with an Ethereum-based decentralized voting sm
    npm install
    ```
 
-3. Create a `.env.local` file with:
+3. Create a `.env` file with:
    ```env
     NEXT_PUBLIC_RPC_URL=https://rpc.api.moonbase.moonbeam.network
     NEXT_PUBLIC_CONTRACT_ADDRESS=0x344C7E3F2fed27D26216CAfA4FfEf79b561Ce210
-    WALLET_PRIVATE_KEY=<YOUR_WALLET_PRIVATE_KEY>
    ```
 
 ## Usage
@@ -51,4 +50,3 @@ A modern frontend for interacting with an Ethereum-based decentralized voting sm
 - Node.js 18+
 - Ethereum wallet (MetaMask, WalletConnect, etc.)
 - Testnet ETH (for voting on test networks)
-- PeraWallet mobile app
